@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Circle, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { PRODUCTION_STAGES, Stage } from "@/lib/productionGuide";
-import { getProject, getProductionProgress, setChecklistItem } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
+import { getProject, getProductionProgress, setChecklistItem } from "@/lib/db";
 import { Project, ProductionProgress, StageKey } from "@/types";
 import ProductionChat from "@/components/ProductionChat";
 
@@ -24,6 +25,7 @@ function stageProgress(stage: Stage, progress: ProductionProgress): { done: numb
 export default function ProducePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const supabase = createClient();
   const [project, setProject] = useState<Project | null>(null);
   const [progress, setProgress] = useState<ProductionProgress>({ recording: {}, mixing: {}, mastering: {} });
   const [activeStage, setActiveStage] = useState<StageKey>("recording");
@@ -32,20 +34,22 @@ export default function ProducePage() {
   const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
-    const p = getProject(id);
-    if (!p) { router.push("/"); return; }
-    setProject(p);
-    setProgress(getProductionProgress(id));
-    // expand all sections by default
     const expanded: Record<string, boolean> = {};
     PRODUCTION_STAGES.forEach((stage) => stage.sections.forEach((s) => { expanded[s.id] = true; }));
     setExpandedSections(expanded);
+
+    Promise.all([getProject(supabase, id), getProductionProgress(supabase, id)]).then(([p, prog]) => {
+      if (!p) { router.push("/"); return; }
+      setProject(p);
+      setProgress(prog);
+    });
   }, [id]);
 
-  function toggleCheck(stage: StageKey, stepId: string) {
+  async function toggleCheck(stage: StageKey, stepId: string) {
     const next = !progress[stage]?.[stepId];
-    setChecklistItem(id, stage, stepId, next);
-    setProgress(getProductionProgress(id));
+    await setChecklistItem(supabase, id, stage, stepId, next);
+    const updated = await getProductionProgress(supabase, id);
+    setProgress(updated);
   }
 
   function toggleSection(sectionId: string) {

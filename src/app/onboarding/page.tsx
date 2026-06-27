@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ArrowLeft, Music, Sparkles, Users, Headphones, Link2, Plus, Trash2, Loader2, CheckCircle2 } from "lucide-react";
-import { saveUserProfile, DEFAULT_USER_PROFILE } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
+import { updateUserProfile } from "@/lib/db";
 import { UserProfile, SoundCloudTrack } from "@/types";
 
 type Step = 0 | 1 | 2 | 3 | 4;
@@ -40,6 +41,7 @@ function ProgressBar({ step }: { step: Step }) {
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const supabase = createClient();
   const [step, setStep] = useState<Step>(0);
   const [form, setForm] = useState<Omit<UserProfile, "completed_onboarding" | "created_at" | "spotify_connected" | "spotify_snapshot">>({
     name: "",
@@ -61,14 +63,10 @@ export default function OnboardingPage() {
   function next() { setStep((s) => Math.min(s + 1, 4) as Step); }
   function back() { setStep((s) => Math.max(s - 1, 0) as Step); }
 
-  function finish() {
-    saveUserProfile({
-      ...DEFAULT_USER_PROFILE,
-      ...form,
-      completed_onboarding: true,
-      created_at: new Date().toISOString(),
-    });
+  async function finish() {
+    await updateUserProfile(supabase, { ...form, completed_onboarding: true });
     router.push("/");
+    router.refresh();
   }
 
   async function addScTrack(e: React.FormEvent) {

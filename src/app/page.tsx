@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Music, Disc3, Radio, UserCircle } from "lucide-react";
+import { Plus, Music, Disc3, Radio, UserCircle, LogOut } from "lucide-react";
 import { Project } from "@/types";
-import { getProjects, createProject, getUserProfile } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
+import { getProjects, createProject } from "@/lib/db";
 import Link from "next/link";
 
 const PROJECT_TYPES = [
@@ -16,28 +17,43 @@ const PROJECT_TYPES = [
 export default function Home() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [profileName, setProfileName] = useState<string>("");
+  const [profileName, setProfileName] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState({ title: "", type: "ep" as Project["type"], description: "" });
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const profile = getUserProfile();
-    if (!profile || !profile.completed_onboarding) {
-      router.replace("/onboarding");
-      return;
-    }
-    setProfileName(profile.name || "");
-    setProjects(getProjects());
-  }, []);
+  const supabase = createClient();
 
-  function handleCreate(e: React.FormEvent) {
+  async function load() {
+    const [{ data: { user } }, ps] = await Promise.all([
+      supabase.auth.getUser(),
+      getProjects(supabase),
+    ]);
+    if (!user) { router.replace("/login"); return; }
+    const { data: profile } = await supabase.from("user_profiles").select("name, completed_onboarding").eq("id", user.id).single();
+    if (!profile?.completed_onboarding) { router.replace("/onboarding"); return; }
+    setProfileName(profile?.name ?? "");
+    setProjects(ps);
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!form.title.trim()) return;
-    createProject(form);
-    setProjects(getProjects());
+    await createProject(supabase, form);
+    setProjects(await getProjects(supabase));
     setShowNew(false);
     setForm({ title: "", type: "ep", description: "" });
   }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
+
+  if (loading) return null;
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -55,6 +71,13 @@ export default function Home() {
               <UserCircle size={16} />
               {profileName || "Artist Profile"}
             </Link>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 border border-zinc-800 hover:border-zinc-600 px-3 py-2.5 rounded-lg transition-colors"
+              title="Sign out"
+            >
+              <LogOut size={15} />
+            </button>
             <button
               onClick={() => setShowNew(true)}
               className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"

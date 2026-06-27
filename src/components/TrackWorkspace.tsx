@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, Sparkles, BookOpen, MessageSquare, FileText, ExternalLink } from "lucide-react";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { Track, AIMessage, UserProfile } from "@/types";
-import { updateTrack } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
+import { updateTrack } from "@/lib/db";
 import Link from "next/link";
 
 type Tab = "write" | "guidance" | "influences";
@@ -23,6 +24,7 @@ const QUICK_ACTIONS = [
 ];
 
 export default function TrackWorkspace({ track, projectId, profile, onUpdate }: Props) {
+  const supabase = createClient();
   const [tab, setTab] = useState<Tab>("write");
   const [local, setLocal] = useState(track);
   const [messages, setMessages] = useState<AIMessage[]>([]);
@@ -38,8 +40,8 @@ export default function TrackWorkspace({ track, projectId, profile, onUpdate }: 
     const next = { ...local, ...updates };
     setLocal(next);
     if (saveTimeout) clearTimeout(saveTimeout);
-    const t = setTimeout(() => {
-      updateTrack(projectId, track.id, updates);
+    const t = setTimeout(async () => {
+      await updateTrack(supabase, track.id, updates);
       onUpdate();
     }, 800);
     setSaveTimeout(t);

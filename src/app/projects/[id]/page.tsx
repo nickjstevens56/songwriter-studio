@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Trash2, ArrowLeft, GripVertical, Sliders, Users } from "lucide-react";
 import { Project, Track, UserProfile } from "@/types";
-import { getProject, createTrack, deleteTrack, getUserProfile } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
+import { getProject, createTrack, deleteTrack, getUserProfile } from "@/lib/db";
 import Link from "next/link";
 import TrackWorkspace from "@/components/TrackWorkspace";
 
@@ -17,8 +18,10 @@ export default function ProjectPage() {
   const [newTrackTitle, setNewTrackTitle] = useState("");
   const [addingTrack, setAddingTrack] = useState(false);
 
-  function reload() {
-    const p = getProject(id);
+  const supabase = createClient();
+
+  async function reload() {
+    const p = await getProject(supabase, id);
     if (!p) { router.push("/"); return; }
     setProject(p);
     if (activeTrack) {
@@ -28,22 +31,23 @@ export default function ProjectPage() {
   }
 
   useEffect(() => {
-    setUserProfile(getUserProfile());
-    reload();
+    Promise.all([reload(), getUserProfile(supabase)]).then(([, profile]) => {
+      setUserProfile(profile);
+    });
   }, [id]);
 
-  function handleAddTrack(e: React.FormEvent) {
+  async function handleAddTrack(e: React.FormEvent) {
     e.preventDefault();
     if (!newTrackTitle.trim()) return;
-    createTrack(id, newTrackTitle.trim());
+    await createTrack(supabase, id, newTrackTitle.trim());
     setNewTrackTitle("");
     setAddingTrack(false);
     reload();
   }
 
-  function handleDeleteTrack(trackId: string) {
+  async function handleDeleteTrack(trackId: string) {
     if (!confirm("Delete this track?")) return;
-    deleteTrack(id, trackId);
+    await deleteTrack(supabase, trackId);
     if (activeTrack?.id === trackId) setActiveTrack(null);
     reload();
   }
@@ -55,13 +59,13 @@ export default function ProjectPage() {
       {/* Header */}
       <header className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-        <Link href="/" className="text-zinc-500 hover:text-zinc-300 transition-colors">
-          <ArrowLeft size={18} />
-        </Link>
-        <div>
-          <span className="text-xs font-medium uppercase tracking-widest text-amber-500">{project.type}</span>
-          <h1 className="text-lg font-semibold leading-tight">{project.title}</h1>
-        </div>
+          <Link href="/" className="text-zinc-500 hover:text-zinc-300 transition-colors">
+            <ArrowLeft size={18} />
+          </Link>
+          <div>
+            <span className="text-xs font-medium uppercase tracking-widest text-amber-500">{project.type}</span>
+            <h1 className="text-lg font-semibold leading-tight">{project.title}</h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Link

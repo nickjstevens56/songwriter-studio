@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, Plus, Trash2, Loader2, ExternalLink, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import { getUserProfile, updateUserProfile } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
+import { getUserProfile, updateUserProfile } from "@/lib/db";
 import { UserProfile, SoundCloudTrack } from "@/types";
 
 type Field = { key: keyof UserProfile; label: string; placeholder: string; hint: string; rows: number };
@@ -17,6 +18,7 @@ const FIELDS: Field[] = [
 ];
 
 export default function ProfilePage() {
+  const supabase = createClient();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [saved, setSaved] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -25,8 +27,7 @@ export default function ProfilePage() {
   const [scError, setScError] = useState("");
 
   useEffect(() => {
-    const p = getUserProfile();
-    if (p) setProfile(p);
+    getUserProfile(supabase).then((p) => { if (p) setProfile(p); });
   }, []);
 
   function handleChange(key: keyof UserProfile, value: string) {
@@ -35,8 +36,8 @@ export default function ProfilePage() {
     setProfile(next);
     setSaved(false);
     if (saveTimeout) clearTimeout(saveTimeout);
-    const t = setTimeout(() => {
-      updateUserProfile({ [key]: value });
+    const t = setTimeout(async () => {
+      await updateUserProfile(supabase, { [key]: value });
       setSaved(true);
     }, 600);
     setSaveTimeout(t);
@@ -64,7 +65,7 @@ export default function ProfilePage() {
       };
       const updated = [...(profile.soundcloud_tracks ?? []), track];
       setProfile((prev) => prev ? { ...prev, soundcloud_tracks: updated } : prev);
-      updateUserProfile({ soundcloud_tracks: updated });
+      await updateUserProfile(supabase, { soundcloud_tracks: updated });
       setScUrl("");
     } catch {
       setScError("Something went wrong. Check the URL and try again.");
@@ -73,11 +74,11 @@ export default function ProfilePage() {
     }
   }
 
-  function removeScTrack(id: string) {
+  async function removeScTrack(id: string) {
     if (!profile) return;
     const updated = profile.soundcloud_tracks.filter((t) => t.id !== id);
     setProfile((prev) => prev ? { ...prev, soundcloud_tracks: updated } : prev);
-    updateUserProfile({ soundcloud_tracks: updated });
+    await updateUserProfile(supabase, { soundcloud_tracks: updated });
   }
 
   if (!profile) return null;
