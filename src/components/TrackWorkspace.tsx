@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2, Sparkles, BookOpen, MessageSquare, FileText, ExternalLink } from "lucide-react";
+import { Send, Loader2, Sparkles, BookOpen, MessageSquare, FileText, ExternalLink, NotebookPen, Check } from "lucide-react";
 import MarkdownMessage from "@/components/MarkdownMessage";
 import { Track, AIMessage, UserProfile } from "@/types";
 import { createClient } from "@/lib/supabase/client";
@@ -30,10 +30,13 @@ export default function TrackWorkspace({ track, projectId, profile, onUpdate }: 
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summarySaved, setSummarySaved] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setLocal(track); }, [track.id]);
+  useEffect(() => { setLocal(track); setMessages([]); setSummary(null); setSummarySaved(false); }, [track.id]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   function autosave(updates: Partial<Track>) {
@@ -74,6 +77,40 @@ export default function TrackWorkspace({ track, projectId, profile, onUpdate }: 
     } finally {
       setLoading(false);
     }
+  }
+
+  async function summarizeSession() {
+    if (!messages.length || summarizing) return;
+    setSummarizing(true);
+    setSummary(null);
+    setSummarySaved(false);
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "summarize_chat",
+          track: local,
+          profile,
+          message: "",
+          history: messages,
+        }),
+      });
+      const data = await res.json();
+      setSummary(data.reply);
+    } catch {
+      setSummary("Could not generate summary. Try again.");
+    } finally {
+      setSummarizing(false);
+    }
+  }
+
+  function saveSummaryToNotes() {
+    if (!summary) return;
+    const date = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const block = `\n\n--- Session summary (${date}) ---\n${summary}`;
+    autosave({ notes: (local.notes || "") + block });
+    setSummarySaved(true);
   }
 
   function handleQuickAction(qa: typeof QUICK_ACTIONS[0]) {
@@ -217,6 +254,29 @@ export default function TrackWorkspace({ track, projectId, profile, onUpdate }: 
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Session summary card */}
+          {summary && (
+            <div className="mx-8 mb-3 bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-xs font-medium text-amber-400 uppercase tracking-wider">
+                  <NotebookPen size={12} /> Session summary
+                </div>
+                <button
+                  onClick={saveSummaryToNotes}
+                  disabled={summarySaved}
+                  className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg border transition-colors ${
+                    summarySaved
+                      ? "border-emerald-500/30 text-emerald-400 cursor-default"
+                      : "border-amber-500/30 text-amber-400 hover:border-amber-500/60"
+                  }`}
+                >
+                  {summarySaved ? <><Check size={11} /> Saved to notes</> : "Save to notes"}
+                </button>
+              </div>
+              <MarkdownMessage content={summary} compact />
+            </div>
+          )}
+
           <div className="border-t border-zinc-800 px-8 py-4">
             <form
               onSubmit={(e) => { e.preventDefault(); sendMessage(input); }}
@@ -235,6 +295,17 @@ export default function TrackWorkspace({ track, projectId, profile, onUpdate }: 
               >
                 <Send size={16} />
               </button>
+              {messages.length > 1 && (
+                <button
+                  type="button"
+                  onClick={summarizeSession}
+                  disabled={summarizing || loading}
+                  title="Summarize this session"
+                  className="flex items-center gap-1.5 border border-zinc-700 hover:border-zinc-500 disabled:opacity-40 text-zinc-400 hover:text-zinc-200 px-3 py-2 rounded-xl text-xs transition-colors"
+                >
+                  {summarizing ? <Loader2 size={14} className="animate-spin" /> : <NotebookPen size={14} />}
+                </button>
+              )}
             </form>
           </div>
         </div>

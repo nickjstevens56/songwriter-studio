@@ -105,6 +105,17 @@ ${trackContext ? `\nCurrent song the user is working on:\n${trackContext}` : ""}
 Influences: "${allInfluences || "none"}".
 ${profileContext ? `\nArtist profile:\n${profileContext}` : ""}`;
     userMessage = message;
+  } else if (action === "summarize_chat") {
+    systemPrompt = `You are a songwriting coach summarizing a guidance session for a songwriter's reference.
+Write a concise session summary they can save and return to later.
+Format:
+- **Key insights** (2–4 bullet points): the most useful ideas or realisations from the conversation
+- **Suggestions to try** (2–3 bullet points): specific, actionable things to experiment with in the writing
+- **Open questions** (1–2 bullet points, only if relevant): threads worth exploring further
+
+Keep each bullet tight — one clear sentence. No preamble, no sign-off.
+${trackContext ? `\nSong context:\n${trackContext}` : ""}`;
+    userMessage = "Summarize our conversation into a compact session note I can save for later.";
   } else if (action === "production_chat") {
     const { stage, context } = await Promise.resolve({ stage: track?.stage, context: track?.context });
     systemPrompt = `You are an experienced record producer and audio engineer coaching an independent musician.
