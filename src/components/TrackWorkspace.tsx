@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, Sparkles, BookOpen, MessageSquare, FileText, ExternalLink } from "lucide-react";
 import MarkdownMessage from "@/components/MarkdownMessage";
-import { Track, AIMessage, ProjectProfile } from "@/types";
+import { Track, AIMessage, UserProfile } from "@/types";
 import { updateTrack } from "@/lib/storage";
 import Link from "next/link";
 
@@ -12,7 +12,7 @@ type Tab = "write" | "guidance" | "influences";
 type Props = {
   track: Track;
   projectId: string;
-  profile: ProjectProfile;
+  profile: UserProfile | null;
   onUpdate: () => void;
 };
 
@@ -79,7 +79,7 @@ export default function TrackWorkspace({ track, projectId, profile, onUpdate }: 
     sendMessage(qa.prompt, qa.action);
   }
 
-  const hasProjectInfluences = profile.core_influences || profile.currently_listening;
+  const hasProjectInfluences = profile?.core_influences || profile?.currently_listening || profile?.artist_bio || profile?.goals;
 
   return (
     <div className="flex flex-col h-full">
@@ -242,15 +242,15 @@ export default function TrackWorkspace({ track, projectId, profile, onUpdate }: 
       {tab === "influences" && (
         <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
 
-          {/* Project-level influences (read-only) */}
+          {/* Artist profile (read-only) */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <BookOpen size={15} className="text-amber-400" />
-                <span className="text-sm font-medium text-zinc-200">Project influences</span>
+                <span className="text-sm font-medium text-zinc-200">Artist profile</span>
               </div>
               <Link
-                href={`/projects/${projectId}/profile`}
+                href="/profile"
                 className="flex items-center gap-1 text-xs text-zinc-500 hover:text-amber-400 transition-colors"
               >
                 Edit <ExternalLink size={11} />
@@ -258,32 +258,44 @@ export default function TrackWorkspace({ track, projectId, profile, onUpdate }: 
             </div>
             {hasProjectInfluences ? (
               <div className="space-y-3">
-                {profile.core_influences && (
+                {profile?.artist_bio && (
+                  <div>
+                    <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">About</p>
+                    <p className="text-sm text-zinc-400 line-clamp-3">{profile.artist_bio}</p>
+                  </div>
+                )}
+                {profile?.goals && (
+                  <div>
+                    <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">Goals</p>
+                    <p className="text-sm text-zinc-400 line-clamp-2">{profile.goals}</p>
+                  </div>
+                )}
+                {profile?.core_influences && (
                   <div>
                     <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">Core influences</p>
                     <p className="text-sm text-zinc-400">{profile.core_influences}</p>
                   </div>
                 )}
-                {profile.currently_listening && (
+                {profile?.currently_listening && (
                   <div>
                     <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">Currently listening</p>
                     <p className="text-sm text-zinc-400">{profile.currently_listening}</p>
                   </div>
                 )}
-                {profile.aesthetic_notes && (
+                {(profile?.soundcloud_tracks?.length ?? 0) > 0 && (
                   <div>
-                    <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">Aesthetic</p>
-                    <p className="text-sm text-zinc-400">{profile.aesthetic_notes}</p>
+                    <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">Your work</p>
+                    <p className="text-sm text-zinc-400">{profile!.soundcloud_tracks.length} SoundCloud track{profile!.soundcloud_tracks.length !== 1 ? "s" : ""} linked</p>
                   </div>
                 )}
               </div>
             ) : (
               <p className="text-sm text-zinc-600">
-                No project influences set.{" "}
-                <Link href={`/projects/${projectId}/profile`} className="text-amber-500 hover:text-amber-400">
-                  Add them here
+                Artist profile is empty.{" "}
+                <Link href="/profile" className="text-amber-500 hover:text-amber-400">
+                  Set it up here
                 </Link>{" "}
-                — they inform every track.
+                — it informs the AI across all your tracks.
               </p>
             )}
           </div>

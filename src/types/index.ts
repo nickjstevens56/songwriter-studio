@@ -1,3 +1,17 @@
+export type UserProfile = {
+  name: string;
+  artist_bio: string;
+  goals: string;
+  core_influences: string;
+  currently_listening: string;
+  soundcloud_url: string;
+  soundcloud_tracks: SoundCloudTrack[];
+  spotify_connected: boolean;
+  spotify_snapshot: SpotifySnapshot | null;
+  completed_onboarding: boolean;
+  created_at: string;
+};
+
 export type SpotifyTrack = {
   name: string;
   artists: string[];

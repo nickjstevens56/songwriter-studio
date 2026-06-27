@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Trash2, ArrowLeft, GripVertical, Sliders, Users } from "lucide-react";
-import { Project, Track } from "@/types";
-import { getProject, createTrack, deleteTrack } from "@/lib/storage";
+import { Project, Track, UserProfile } from "@/types";
+import { getProject, createTrack, deleteTrack, getUserProfile } from "@/lib/storage";
 import Link from "next/link";
 import TrackWorkspace from "@/components/TrackWorkspace";
 
@@ -12,6 +12,7 @@ export default function ProjectPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [activeTrack, setActiveTrack] = useState<Track | null>(null);
   const [newTrackTitle, setNewTrackTitle] = useState("");
   const [addingTrack, setAddingTrack] = useState(false);
@@ -26,7 +27,10 @@ export default function ProjectPage() {
     }
   }
 
-  useEffect(() => { reload(); }, [id]);
+  useEffect(() => {
+    setUserProfile(getUserProfile());
+    reload();
+  }, [id]);
 
   function handleAddTrack(e: React.FormEvent) {
     e.preventDefault();
@@ -61,10 +65,10 @@ export default function ProjectPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href={`/projects/${id}/profile`}
+            href="/profile"
             className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-500 px-4 py-2 rounded-lg transition-colors"
           >
-            <Users size={14} /> Influences
+            <Users size={14} /> Artist Profile
           </Link>
           <Link
             href={`/projects/${id}/produce`}
@@ -157,7 +161,7 @@ export default function ProjectPage() {
             <TrackWorkspace
               track={activeTrack}
               projectId={id}
-              profile={project.profile ?? { core_influences: "", currently_listening: "", aesthetic_notes: "" }}
+              profile={userProfile}
               onUpdate={reload}
             />
           ) : (

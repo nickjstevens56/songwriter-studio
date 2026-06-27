@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Music, Disc3, Radio } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Plus, Music, Disc3, Radio, UserCircle } from "lucide-react";
 import { Project } from "@/types";
-import { getProjects, createProject } from "@/lib/storage";
+import { getProjects, createProject, getUserProfile } from "@/lib/storage";
 import Link from "next/link";
 
 const PROJECT_TYPES = [
@@ -13,11 +14,19 @@ const PROJECT_TYPES = [
 ] as const;
 
 export default function Home() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [profileName, setProfileName] = useState<string>("");
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState({ title: "", type: "ep" as Project["type"], description: "" });
 
   useEffect(() => {
+    const profile = getUserProfile();
+    if (!profile || !profile.completed_onboarding) {
+      router.replace("/onboarding");
+      return;
+    }
+    setProfileName(profile.name || "");
     setProjects(getProjects());
   }, []);
 
@@ -38,12 +47,21 @@ export default function Home() {
             <h1 className="text-4xl font-bold tracking-tight">Songwriter Studio</h1>
             <p className="text-zinc-400 mt-2">Build your recording project from first idea to distribution.</p>
           </div>
-          <button
-            onClick={() => setShowNew(true)}
-            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"
-          >
-            <Plus size={18} /> New Project
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/profile"
+              className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-500 px-4 py-2.5 rounded-lg transition-colors"
+            >
+              <UserCircle size={16} />
+              {profileName || "Artist Profile"}
+            </Link>
+            <button
+              onClick={() => setShowNew(true)}
+              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold px-5 py-2.5 rounded-lg transition-colors"
+            >
+              <Plus size={18} /> New Project
+            </button>
+          </div>
         </div>
 
         {projects.length === 0 && !showNew && (

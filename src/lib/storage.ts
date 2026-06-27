@@ -1,6 +1,36 @@
-import { Project, Track, ProductionProgress, StageKey } from "@/types";
+import { Project, Track, ProductionProgress, StageKey, UserProfile } from "@/types";
 
+const USER_PROFILE_KEY = "songwriter_user_profile";
 const PROJECTS_KEY = "songwriter_projects";
+
+export const DEFAULT_USER_PROFILE: UserProfile = {
+  name: "",
+  artist_bio: "",
+  goals: "",
+  core_influences: "",
+  currently_listening: "",
+  soundcloud_url: "",
+  soundcloud_tracks: [],
+  spotify_connected: false,
+  spotify_snapshot: null,
+  completed_onboarding: false,
+  created_at: new Date().toISOString(),
+};
+
+export function getUserProfile(): UserProfile | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(USER_PROFILE_KEY);
+  return raw ? { ...DEFAULT_USER_PROFILE, ...JSON.parse(raw) } : null;
+}
+
+export function saveUserProfile(profile: UserProfile): void {
+  localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
+}
+
+export function updateUserProfile(updates: Partial<UserProfile>): void {
+  const current = getUserProfile() ?? { ...DEFAULT_USER_PROFILE };
+  saveUserProfile({ ...current, ...updates });
+}
 
 export function getProjects(): Project[] {
   if (typeof window === "undefined") return [];

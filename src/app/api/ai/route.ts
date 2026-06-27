@@ -38,10 +38,12 @@ export async function POST(req: NextRequest) {
     : "";
 
   const profileContext = [
+    profile?.name && `Artist name: ${profile.name}`,
+    profile?.artist_bio && `About the artist: ${profile.artist_bio}`,
+    profile?.goals && `What the artist is working on / looking for help with: ${profile.goals}`,
     profile?.core_influences && `Core influences: ${profile.core_influences}`,
-    profile?.currently_listening && `Currently listening to (manual): ${profile.currently_listening}`,
+    profile?.currently_listening && `Currently listening to: ${profile.currently_listening}`,
     spotifyContext,
-    profile?.aesthetic_notes && `Aesthetic/vibe: ${profile.aesthetic_notes}`,
     soundcloudContext,
   ].filter(Boolean).join("\n");
 
@@ -53,9 +55,9 @@ export async function POST(req: NextRequest) {
     systemPrompt = `You are an expert musicologist and lyric analyst helping a songwriter learn from their influences.
 Use markdown formatting with headers, bold text, and bullet points to make your response easy to read. Use relevant emojis as section markers (e.g. 🎸 for an artist section, 🔗 for common threads, ⚡ for outliers, 💡 for takeaways).
 
-The user's influences (project-wide and track-specific, combined):
+The user's influences (global profile and track-specific, combined):
 ${allInfluences || "see the user's message"}
-${profileContext ? `\nAdditional project context:\n${profileContext}` : ""}
+${profileContext ? `\nArtist profile context:\n${profileContext}` : ""}
 ${hasLyrics ? `\nThe user has written the following lyrics for this song:\n"""\n${track.lyrics}\n"""\n` : ""}
 Your job:
 1. Cover EVERY artist in the combined influence list — do not skip or combine any of them. Give each one its own ## header with an emoji.
