@@ -21,6 +21,7 @@ const DEFAULT_PROFILE = {
   currently_listening: "",
   aesthetic_notes: "",
   soundcloud_url: "",
+  soundcloud_tracks: [],
   spotify_connected: false,
   spotify_snapshot: null,
 };

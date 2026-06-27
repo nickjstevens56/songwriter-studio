@@ -15,11 +15,20 @@ export type SpotifySnapshot = {
   synced_at: string;
 };
 
+export type SoundCloudTrack = {
+  id: string;
+  url: string;
+  title: string;
+  description: string;
+  author: string;
+};
+
 export type ProjectProfile = {
   core_influences: string;
   currently_listening: string;
   aesthetic_notes: string;
   soundcloud_url: string;
+  soundcloud_tracks: SoundCloudTrack[];
   spotify_connected: boolean;
   spotify_snapshot: SpotifySnapshot | null;
 };

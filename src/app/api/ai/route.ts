@@ -28,12 +28,21 @@ export async function POST(req: NextRequest) {
     track?.influences,
   ].filter(Boolean).join("; ");
 
+  // Build SoundCloud context from the user's own tracks
+  const scTracks = profile?.soundcloud_tracks ?? [];
+  const soundcloudContext = scTracks.length > 0
+    ? `The user's own music on SoundCloud (${scTracks.length} track${scTracks.length !== 1 ? "s" : ""}):\n` +
+      scTracks.map((t: { title: string; description: string }) =>
+        `- "${t.title}"${t.description ? `: ${t.description.slice(0, 200)}` : ""}`
+      ).join("\n")
+    : "";
+
   const profileContext = [
     profile?.core_influences && `Core influences: ${profile.core_influences}`,
     profile?.currently_listening && `Currently listening to (manual): ${profile.currently_listening}`,
     spotifyContext,
     profile?.aesthetic_notes && `Aesthetic/vibe: ${profile.aesthetic_notes}`,
-    profile?.soundcloud_url && `SoundCloud profile: ${profile.soundcloud_url}`,
+    soundcloudContext,
   ].filter(Boolean).join("\n");
 
   let systemPrompt = "";

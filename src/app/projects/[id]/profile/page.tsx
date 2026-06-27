@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Users, Headphones, Palette, Music2, RefreshCw, Unlink, ExternalLink, AlertCircle, CheckCircle2, Link2 } from "lucide-react";
+import { ArrowLeft, Users, Headphones, Palette, Music2, RefreshCw, Unlink, ExternalLink, AlertCircle, CheckCircle2, Link2, Plus, Trash2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { getProject, updateProfile } from "@/lib/storage";
-import { Project, ProjectProfile, SpotifySnapshot } from "@/types";
+import { Project, ProjectProfile, SpotifySnapshot, SoundCloudTrack } from "@/types";
 
 type WritableField = "core_influences" | "currently_listening" | "aesthetic_notes" | "soundcloud_url";
 
@@ -53,6 +53,7 @@ export default function ProfilePage() {
     currently_listening: "",
     aesthetic_notes: "",
     soundcloud_url: "",
+    soundcloud_tracks: [],
     spotify_connected: false,
     spotify_snapshot: null,
   });
@@ -60,6 +61,9 @@ export default function ProfilePage() {
   const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [spotifyLoading, setSpotifyLoading] = useState(false);
   const [spotifyStatus, setSpotifyStatus] = useState<"idle" | "connected" | "error" | "denied">("idle");
+  const [scTrackUrl, setScTrackUrl] = useState("");
+  const [scLoading, setScLoading] = useState(false);
+  const [scError, setScError] = useState("");
 
   const fetchSpotifyData = useCallback(async () => {
     setSpotifyLoading(true);
@@ -88,7 +92,7 @@ export default function ProfilePage() {
     const p = getProject(id);
     if (!p) { router.push("/"); return; }
     setProject(p);
-    const profile = p.profile ?? { core_influences: "", currently_listening: "", aesthetic_notes: "", soundcloud_url: "", spotify_connected: false, spotify_snapshot: null };
+    const profile = p.profile ?? { core_influences: "", currently_listening: "", aesthetic_notes: "", soundcloud_url: "", soundcloud_tracks: [], spotify_connected: false, spotify_snapshot: null };
     setForm(profile);
     if (profile.spotify_connected) setSpotifyStatus("connected");
 
@@ -116,6 +120,43 @@ export default function ProfilePage() {
     setForm((prev) => ({ ...prev, ...updates }));
     updateProfile(id, updates);
     setSpotifyStatus("idle");
+  }
+
+  async function handleAddScTrack(e: React.FormEvent) {
+    e.preventDefault();
+    if (!scTrackUrl.trim()) return;
+    setScError("");
+    setScLoading(true);
+    try {
+      const res = await fetch("/api/soundcloud", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: scTrackUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setScError(data.error ?? "Could not fetch track."); return; }
+      const newTrack: SoundCloudTrack = {
+        id: crypto.randomUUID(),
+        url: scTrackUrl.trim(),
+        title: data.title,
+        description: data.description,
+        author: data.author,
+      };
+      const updated = [...(form.soundcloud_tracks ?? []), newTrack];
+      setForm((prev) => ({ ...prev, soundcloud_tracks: updated }));
+      updateProfile(id, { soundcloud_tracks: updated });
+      setScTrackUrl("");
+    } catch {
+      setScError("Something went wrong. Check the URL and try again.");
+    } finally {
+      setScLoading(false);
+    }
+  }
+
+  function handleRemoveScTrack(trackId: string) {
+    const updated = (form.soundcloud_tracks ?? []).filter((t) => t.id !== trackId);
+    setForm((prev) => ({ ...prev, soundcloud_tracks: updated }));
+    updateProfile(id, { soundcloud_tracks: updated });
   }
 
   const spotifyConfigured = !!process.env.NEXT_PUBLIC_SPOTIFY_ENABLED;
@@ -262,32 +303,91 @@ export default function ProfilePage() {
         </div>
 
         {/* SoundCloud */}
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
+        <div className="space-y-5">
+          <div className="flex items-center gap-2">
             <Link2 size={15} className="text-orange-400" />
             <span className="text-sm font-medium text-zinc-200">SoundCloud</span>
           </div>
-          <p className="text-xs text-zinc-500 mb-2">
-            Add your SoundCloud profile URL as a reference. This is stored with your project and included as context for the AI.
-          </p>
-          <div className="flex gap-2">
-            <input
-              value={form.soundcloud_url}
-              onChange={(e) => handleChange("soundcloud_url", e.target.value)}
-              placeholder="https://soundcloud.com/yourname"
-              className="flex-1 bg-zinc-900 border border-zinc-800 focus:border-amber-500 rounded-xl px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none transition-colors"
-            />
-            {form.soundcloud_url && (
-              <a
-                href={form.soundcloud_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-orange-400 border border-zinc-700 px-3 py-2 rounded-xl transition-colors"
-              >
-                <ExternalLink size={14} />
-              </a>
-            )}
+
+          {/* Profile URL */}
+          <div>
+            <label className="block text-xs text-zinc-500 mb-1.5">Your SoundCloud profile</label>
+            <div className="flex gap-2">
+              <input
+                value={form.soundcloud_url}
+                onChange={(e) => handleChange("soundcloud_url", e.target.value)}
+                placeholder="https://soundcloud.com/yourname"
+                className="flex-1 bg-zinc-900 border border-zinc-800 focus:border-amber-500 rounded-xl px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none transition-colors"
+              />
+              {form.soundcloud_url && (
+                <a
+                  href={form.soundcloud_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-orange-400 border border-zinc-700 px-3 py-2 rounded-xl transition-colors"
+                >
+                  <ExternalLink size={14} />
+                </a>
+              )}
+            </div>
           </div>
+
+          {/* Add tracks */}
+          <div>
+            <label className="block text-xs text-zinc-500 mb-1">Your tracks</label>
+            <p className="text-xs text-zinc-600 mb-2">
+              Paste a public SoundCloud track URL — the app will pull the title and description so the AI understands your own musical style and voice.
+            </p>
+            <form onSubmit={handleAddScTrack} className="flex gap-2">
+              <input
+                value={scTrackUrl}
+                onChange={(e) => { setScTrackUrl(e.target.value); setScError(""); }}
+                placeholder="https://soundcloud.com/yourname/your-track"
+                className="flex-1 bg-zinc-900 border border-zinc-800 focus:border-orange-500 rounded-xl px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none transition-colors"
+              />
+              <button
+                type="submit"
+                disabled={!scTrackUrl.trim() || scLoading}
+                className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-400 disabled:opacity-40 text-black font-semibold px-4 py-2 rounded-xl text-sm transition-colors"
+              >
+                {scLoading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                Add
+              </button>
+            </form>
+            {scError && <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {scError}</p>}
+          </div>
+
+          {/* Track list */}
+          {(form.soundcloud_tracks ?? []).length > 0 && (
+            <div className="space-y-2">
+              {(form.soundcloud_tracks ?? []).map((track) => (
+                <div key={track.id} className="group bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={track.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-zinc-200 hover:text-orange-400 transition-colors truncate"
+                      >
+                        {track.title || track.url}
+                      </a>
+                      {track.author && <span className="text-xs text-zinc-600 shrink-0">· {track.author}</span>}
+                    </div>
+                    {track.description && (
+                      <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{track.description}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleRemoveScTrack(track.id)}
+                    className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all shrink-0 mt-0.5"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* How it gets used */}
