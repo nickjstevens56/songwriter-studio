@@ -47,18 +47,26 @@ export async function POST(req: NextRequest) {
     soundcloudContext,
   ].filter(Boolean).join("\n");
 
+  // Build current track context — always injected so the AI never needs the user to paste lyrics
+  const hasLyrics = track?.lyrics?.trim();
+  const trackContext = [
+    track?.theme && `Song theme: ${track.theme}`,
+    track?.mood && `Mood: ${track.mood}`,
+    track?.influences && `Track-specific influences: ${track.influences}`,
+    hasLyrics && `Current draft lyrics:\n"""\n${track.lyrics}\n"""`,
+  ].filter(Boolean).join("\n");
+
   let systemPrompt = "";
   let userMessage = "";
 
   if (action === "analyze_influence") {
-    const hasLyrics = track?.lyrics?.trim();
     systemPrompt = `You are an expert musicologist and lyric analyst helping a songwriter learn from their influences.
 Use markdown formatting with headers, bold text, and bullet points to make your response easy to read. Use relevant emojis as section markers (e.g. 🎸 for an artist section, 🔗 for common threads, ⚡ for outliers, 💡 for takeaways).
 
 The user's influences (global profile and track-specific, combined):
 ${allInfluences || "see the user's message"}
 ${profileContext ? `\nArtist profile context:\n${profileContext}` : ""}
-${hasLyrics ? `\nThe user has written the following lyrics for this song:\n"""\n${track.lyrics}\n"""\n` : ""}
+${trackContext ? `\nCurrent song context:\n${trackContext}` : ""}
 Your job:
 1. Cover EVERY artist in the combined influence list — do not skip or combine any of them. Give each one its own ## header with an emoji.
 2. For each artist: identify 2–3 specific, named lyrical techniques they use (e.g. "plain-spoken confession", "mythological metaphor", "conversational enjambment", "elliptical imagery"). Describe HOW the technique works and what effect it creates — do NOT quote song lyrics directly, as quoted lyrics are frequently misremembered. You may reference a song title or album name only if you are highly confident it is correct; otherwise describe the technique in general terms.
@@ -77,25 +85,25 @@ Critical rules:
 Use markdown formatting — bold key ideas, use bullet points for suggestions, and use emojis as visual anchors (e.g. 🎯 for core theme, 🖼️ for imagery ideas, ❓ for questions to the writer).
 Ask clarifying questions to help them go deeper. Suggest imagery, metaphors, or angles they haven't considered.
 Do not write lyrics. Help them think more clearly about what they want to say.
-${profileContext ? `\nProject influences and aesthetic:\n${profileContext}` : ""}`;
-    userMessage = `My song has this theme: "${track?.theme}". The mood I'm going for is: "${track?.mood}". ${message}`;
+${trackContext ? `\nCurrent song:\n${trackContext}` : ""}
+${profileContext ? `\nArtist profile and influences:\n${profileContext}` : ""}`;
+    userMessage = message;
   } else if (action === "lyric_feedback") {
     systemPrompt = `You are a trusted creative collaborator and lyric editor. The user is writing a song and wants honest, constructive feedback.
 Use markdown formatting with bold for specific lines you're referencing, bullet points for distinct observations, and emojis as section markers (e.g. ✅ for what's working, 🔍 for what to examine, ❓ for questions).
 Focus on: specificity of imagery, emotional authenticity, the strength of the hook, and internal consistency.
 Point to specific lines by quoting them in bold. Ask questions that push them to dig deeper. Do not rewrite their lyrics.
-Influences (project-wide + track-specific): ${allInfluences || "not specified"}.
-The song's theme is: "${track?.theme || "not specified"}". Mood: "${track?.mood || "not specified"}".
-${profileContext ? `\nProject aesthetic context:\n${profileContext}` : ""}`;
-    userMessage = `Here are my lyrics so far:\n\n${track?.lyrics}\n\n${message}`;
+${trackContext ? `\nCurrent song:\n${trackContext}` : ""}
+${profileContext ? `\nArtist profile and influences:\n${profileContext}` : ""}`;
+    userMessage = message;
   } else if (action === "chat") {
     systemPrompt = `You are a knowledgeable, encouraging songwriting coach.
 Use markdown formatting to make responses easy to scan — bold key ideas, bullet points for lists, emojis as natural visual punctuation where they fit the tone.
 You help with: developing song themes, understanding songwriting craft, analyzing lyrical techniques, and overcoming creative blocks.
 You do not write lyrics or songs for the user. You ask good questions, offer frameworks, and give honest feedback.
-Song context — Theme: "${track?.theme || "none"}". Mood: "${track?.mood || "none"}".
+${trackContext ? `\nCurrent song the user is working on:\n${trackContext}` : ""}
 Influences: "${allInfluences || "none"}".
-${profileContext ? `\nProject aesthetic:\n${profileContext}` : ""}`;
+${profileContext ? `\nArtist profile:\n${profileContext}` : ""}`;
     userMessage = message;
   } else if (action === "production_chat") {
     const { stage, context } = await Promise.resolve({ stage: track?.stage, context: track?.context });
