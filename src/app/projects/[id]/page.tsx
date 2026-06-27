@@ -105,15 +105,29 @@ export default function ProjectPage() {
             ))}
 
             {addingTrack && (
-              <form onSubmit={handleAddTrack} className="p-3 border-b border-zinc-800">
+              <form onSubmit={handleAddTrack} className="p-3 border-b border-zinc-800 space-y-2">
                 <input
                   autoFocus
                   value={newTrackTitle}
                   onChange={(e) => setNewTrackTitle(e.target.value)}
                   placeholder="Track title..."
                   className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-500"
-                  onBlur={() => { if (!newTrackTitle) setAddingTrack(false); }}
                 />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold py-1.5 rounded transition-colors"
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAddingTrack(false); setNewTrackTitle(""); }}
+                    className="flex-1 text-zinc-500 hover:text-zinc-300 text-xs py-1.5 rounded border border-zinc-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
             )}
 

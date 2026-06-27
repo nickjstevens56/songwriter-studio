@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, Sparkles } from "lucide-react";
+import MarkdownMessage from "@/components/MarkdownMessage";
 import { AIMessage, StageKey } from "@/types";
 
 const STAGE_PROMPTS: Record<StageKey, { label: string; prompts: string[] }> = {
@@ -103,13 +104,13 @@ export default function ProductionChat({ stage, projectTitle }: Props) {
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <div
-              className={`max-w-[90%] rounded-xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+              className={`max-w-[90%] rounded-xl px-3 py-2 ${
                 msg.role === "user"
-                  ? "bg-amber-500/20 text-amber-100 rounded-br-sm"
+                  ? "bg-amber-500/20 text-amber-100 rounded-br-sm text-xs leading-relaxed"
                   : "bg-zinc-800 text-zinc-300 rounded-bl-sm"
               }`}
             >
-              {msg.content}
+              {msg.role === "user" ? msg.content : <MarkdownMessage content={msg.content} compact />}
             </div>
           </div>
         ))}

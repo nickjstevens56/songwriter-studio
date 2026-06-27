@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, Sparkles, BookOpen, MessageSquare, FileText } from "lucide-react";
+import MarkdownMessage from "@/components/MarkdownMessage";
 import { Track, AIMessage } from "@/types";
 import { updateTrack } from "@/lib/storage";
 
@@ -14,7 +15,7 @@ type Props = {
 };
 
 const QUICK_ACTIONS = [
-  { label: "Analyze my influences", action: "analyze_influence", prompt: "Analyze the lyrical style, techniques, and signature approaches of my listed influences. What makes them tick?" },
+  { label: "Analyze my influences", action: "analyze_influence", prompt: "Analyze every artist I've listed as an influence. Cover each one individually, then identify what they share and flag any that don't quite fit with the rest." },
   { label: "Develop my theme", action: "theme_guidance", prompt: "Help me go deeper on my theme. What angles haven't I considered? What imagery might work?" },
   { label: "Feedback on my lyrics", action: "lyric_feedback", prompt: "Give me honest feedback on what's working and what could be stronger in my lyrics." },
 ];
@@ -195,13 +196,13 @@ export default function TrackWorkspace({ track, projectId, onUpdate }: Props) {
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                  className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                     msg.role === "user"
-                      ? "bg-amber-500/20 text-amber-100 rounded-br-sm"
+                      ? "bg-amber-500/20 text-amber-100 rounded-br-sm text-sm leading-relaxed"
                       : "bg-zinc-800 text-zinc-200 rounded-bl-sm"
                   }`}
                 >
-                  {msg.content}
+                  {msg.role === "user" ? msg.content : <MarkdownMessage content={msg.content} />}
                 </div>
               </div>
             ))}
@@ -264,7 +265,7 @@ export default function TrackWorkspace({ track, projectId, onUpdate }: Props) {
               onClick={() => {
                 setTab("guidance");
                 sendMessage(
-                  `Analyze the lyrical style and techniques of these artists: ${local.influences || "my listed influences"}. Break down what makes their writing distinctive — specific devices, imagery patterns, structural choices — and suggest how I can incorporate those approaches into my own writing without imitating them.`,
+                  `Analyze every artist I've listed as an influence. Cover each one individually, then identify what they share and flag any that don't quite fit with the rest.`,
                   "analyze_influence"
                 );
               }}
