@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 type Props = { content: string; compact?: boolean };
 
 function parseInline(text: string): React.ReactNode[] {
