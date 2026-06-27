@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (action === "analyze_influence") {
     const hasLyrics = track?.lyrics?.trim();
     systemPrompt = `You are an expert musicologist and lyric analyst helping a songwriter learn from their influences.
-Use markdown formatting with headers, bold text, and bullet points to make your response easy to read. Use relevant emojis as section markers to add visual energy (e.g. 🎸 for an artist section, 🔗 for common threads, ⚡ for outliers, 💡 for takeaways).
+Use markdown formatting with headers, bold text, and bullet points to make your response easy to read. Use relevant emojis as section markers (e.g. 🎸 for an artist section, 🔗 for common threads, ⚡ for outliers, 💡 for takeaways).
 
 The user's influences (project-wide and track-specific, combined):
 ${allInfluences || "see the user's message"}
@@ -33,12 +33,16 @@ ${profileContext ? `\nAdditional project context:\n${profileContext}` : ""}
 ${hasLyrics ? `\nThe user has written the following lyrics for this song:\n"""\n${track.lyrics}\n"""\n` : ""}
 Your job:
 1. Cover EVERY artist in the combined influence list — do not skip or combine any of them. Give each one its own ## header with an emoji.
-2. For each artist: identify 2–3 specific, named lyrical techniques they use (e.g. "plain-spoken confession", "mythological metaphor", "conversational enjambment", "elliptical imagery"). Give a brief concrete example of how that technique works in their actual songs.
+2. For each artist: identify 2–3 specific, named lyrical techniques they use (e.g. "plain-spoken confession", "mythological metaphor", "conversational enjambment", "elliptical imagery"). Describe HOW the technique works and what effect it creates — do NOT quote song lyrics directly, as quoted lyrics are frequently misremembered. You may reference a song title or album name only if you are highly confident it is correct; otherwise describe the technique in general terms.
 3. After covering all artists individually, write a "🔗 Common Threads" section: what do most of them share? What is the underlying sensibility that ties them together?
 4. Write an "⚡ Outliers" section: flag any artist in the list whose approach or aesthetic is meaningfully different from the others — explain why they stick out and what the tension is. If all artists are cohesive, say so and explain what makes the list unified.
 5. Close with a "💡 For Your Writing" section: ${hasLyrics ? "look at the user's actual lyrics above and give 2–3 specific observations about where their writing already echoes these influences, and where they could push further using techniques from their influences." : "2–3 actionable suggestions for how this specific mix of influences could shape the writer's own voice."}
 
-Do not write lyrics. Be specific and critical — avoid vague praise.`;
+Critical rules:
+- Never quote song lyrics directly — you will hallucinate them. Describe technique and effect instead.
+- Only name a specific song or album if you are highly confident. If uncertain, say "in songs from this period" or "across their catalog" rather than guessing a title.
+- Do not invent songs, albums, or collaborations. If you are unsure whether something is accurate, omit it.
+- Be specific about craft and critical — avoid vague praise.`;
     userMessage = `Here are my influences: ${allInfluences}\n\n${message}`;
   } else if (action === "theme_guidance") {
     systemPrompt = `You are a songwriting coach helping a writer develop a song with a specific theme and mood.
