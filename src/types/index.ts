@@ -1,3 +1,9 @@
+export type ProjectProfile = {
+  core_influences: string;
+  currently_listening: string;
+  aesthetic_notes: string;
+};
+
 export type Project = {
   id: string;
   title: string;
@@ -5,6 +11,7 @@ export type Project = {
   description: string;
   created_at: string;
   tracks: Track[];
+  profile: ProjectProfile;
 };
 
 export type Track = {

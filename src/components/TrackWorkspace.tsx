@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2, Sparkles, BookOpen, MessageSquare, FileText } from "lucide-react";
+import { Send, Loader2, Sparkles, BookOpen, MessageSquare, FileText, ExternalLink } from "lucide-react";
 import MarkdownMessage from "@/components/MarkdownMessage";
-import { Track, AIMessage } from "@/types";
+import { Track, AIMessage, ProjectProfile } from "@/types";
 import { updateTrack } from "@/lib/storage";
+import Link from "next/link";
 
 type Tab = "write" | "guidance" | "influences";
 
 type Props = {
   track: Track;
   projectId: string;
+  profile: ProjectProfile;
   onUpdate: () => void;
 };
 
@@ -20,7 +22,7 @@ const QUICK_ACTIONS = [
   { label: "Feedback on my lyrics", action: "lyric_feedback", prompt: "Give me honest feedback on what's working and what could be stronger in my lyrics." },
 ];
 
-export default function TrackWorkspace({ track, projectId, onUpdate }: Props) {
+export default function TrackWorkspace({ track, projectId, profile, onUpdate }: Props) {
   const [tab, setTab] = useState<Tab>("write");
   const [local, setLocal] = useState(track);
   const [messages, setMessages] = useState<AIMessage[]>([]);
@@ -29,13 +31,8 @@ export default function TrackWorkspace({ track, projectId, onUpdate }: Props) {
   const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setLocal(track);
-  }, [track.id]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  useEffect(() => { setLocal(track); }, [track.id]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   function autosave(updates: Partial<Track>) {
     const next = { ...local, ...updates };
@@ -63,6 +60,7 @@ export default function TrackWorkspace({ track, projectId, onUpdate }: Props) {
         body: JSON.stringify({
           action,
           track: local,
+          profile,
           message: messageText,
           history: messages.slice(-10),
         }),
@@ -80,6 +78,8 @@ export default function TrackWorkspace({ track, projectId, onUpdate }: Props) {
     setTab("guidance");
     sendMessage(qa.prompt, qa.action);
   }
+
+  const hasProjectInfluences = profile.core_influences || profile.currently_listening;
 
   return (
     <div className="flex flex-col h-full">
@@ -152,7 +152,6 @@ export default function TrackWorkspace({ track, projectId, onUpdate }: Props) {
             />
           </div>
 
-          {/* Quick actions */}
           <div className="pt-2">
             <p className="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-3">AI guidance</p>
             <div className="flex flex-wrap gap-2">
@@ -241,43 +240,96 @@ export default function TrackWorkspace({ track, projectId, onUpdate }: Props) {
 
       {/* Tab: Influences */}
       {tab === "influences" && (
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-5">
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+
+          {/* Project-level influences (read-only) */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <BookOpen size={15} className="text-amber-400" />
+                <span className="text-sm font-medium text-zinc-200">Project influences</span>
+              </div>
+              <Link
+                href={`/projects/${projectId}/profile`}
+                className="flex items-center gap-1 text-xs text-zinc-500 hover:text-amber-400 transition-colors"
+              >
+                Edit <ExternalLink size={11} />
+              </Link>
+            </div>
+            {hasProjectInfluences ? (
+              <div className="space-y-3">
+                {profile.core_influences && (
+                  <div>
+                    <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">Core influences</p>
+                    <p className="text-sm text-zinc-400">{profile.core_influences}</p>
+                  </div>
+                )}
+                {profile.currently_listening && (
+                  <div>
+                    <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">Currently listening</p>
+                    <p className="text-sm text-zinc-400">{profile.currently_listening}</p>
+                  </div>
+                )}
+                {profile.aesthetic_notes && (
+                  <div>
+                    <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">Aesthetic</p>
+                    <p className="text-sm text-zinc-400">{profile.aesthetic_notes}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-600">
+                No project influences set.{" "}
+                <Link href={`/projects/${projectId}/profile`} className="text-amber-500 hover:text-amber-400">
+                  Add them here
+                </Link>{" "}
+                — they inform every track.
+              </p>
+            )}
+          </div>
+
+          {/* Track-specific additions */}
           <div>
-            <label className="block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-1.5">Artists / Writers who influence this song</label>
+            <label className="block text-xs font-medium text-zinc-500 uppercase tracking-widest mb-1.5">
+              Additional influences for this track
+            </label>
+            <p className="text-xs text-zinc-600 mb-2">Layered on top of your project influences. Use this for song-specific references — a particular album, an obscure artist, a mood that only applies here.</p>
             <textarea
               value={local.influences}
               onChange={(e) => autosave({ influences: e.target.value })}
-              placeholder="e.g. Phoebe Bridgers, early Bob Dylan, Leonard Cohen — be specific about which era or albums"
+              placeholder="e.g. Springsteen's Nebraska specifically, or Sufjan's Carrie & Lowell era..."
               rows={4}
               className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-500 resize-none"
             />
           </div>
 
+          {/* Analyze button */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-3">
-              <BookOpen size={16} className="text-amber-400" />
+              <Sparkles size={15} className="text-amber-400" />
               <span className="text-sm font-medium text-zinc-300">Lyric analysis</span>
             </div>
             <p className="text-sm text-zinc-500 mb-4">
-              Add your influences above, then ask the AI to break down what makes their writing work — and how you can apply those techniques to your own song.
+              Breaks down your influences — project-wide and track-specific — and connects the techniques to what you&apos;ve written.
             </p>
             <button
               onClick={() => {
                 setTab("guidance");
                 sendMessage(
-                  `Analyze every artist I've listed as an influence. Cover each one individually, then identify what they share and flag any that don't quite fit with the rest.`,
+                  "Analyze every artist I've listed as an influence. Cover each one individually, then identify what they share and flag any that don't quite fit with the rest.",
                   "analyze_influence"
                 );
               }}
               className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 hover:border-amber-500/60 text-amber-400 text-sm px-4 py-2 rounded-lg transition-colors"
             >
-              <Sparkles size={14} /> Analyze my influences
+              <Sparkles size={14} /> Analyze all influences
             </button>
           </div>
 
+          {/* Research a specific artist */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-3">
-              <MessageSquare size={16} className="text-amber-400" />
+              <MessageSquare size={15} className="text-amber-400" />
               <span className="text-sm font-medium text-zinc-300">Research a specific artist</span>
             </div>
             <form

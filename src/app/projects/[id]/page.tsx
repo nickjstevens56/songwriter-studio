@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Plus, Trash2, ArrowLeft, GripVertical, Sliders } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, GripVertical, Sliders, Users } from "lucide-react";
 import { Project, Track } from "@/types";
 import { getProject, createTrack, deleteTrack } from "@/lib/storage";
 import Link from "next/link";
@@ -59,12 +59,20 @@ export default function ProjectPage() {
           <h1 className="text-lg font-semibold leading-tight">{project.title}</h1>
         </div>
         </div>
-        <Link
-          href={`/projects/${id}/produce`}
-          className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-500 px-4 py-2 rounded-lg transition-colors"
-        >
-          <Sliders size={14} /> Production Guide
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/projects/${id}/profile`}
+            className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-500 px-4 py-2 rounded-lg transition-colors"
+          >
+            <Users size={14} /> Influences
+          </Link>
+          <Link
+            href={`/projects/${id}/produce`}
+            className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 border border-zinc-700 hover:border-zinc-500 px-4 py-2 rounded-lg transition-colors"
+          >
+            <Sliders size={14} /> Production Guide
+          </Link>
+        </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
@@ -149,6 +157,7 @@ export default function ProjectPage() {
             <TrackWorkspace
               track={activeTrack}
               projectId={id}
+              profile={project.profile ?? { core_influences: "", currently_listening: "", aesthetic_notes: "" }}
               onUpdate={reload}
             />
           ) : (

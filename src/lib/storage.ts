@@ -16,11 +16,14 @@ export function getProject(id: string): Project | null {
   return getProjects().find((p) => p.id === id) ?? null;
 }
 
+const DEFAULT_PROFILE = { core_influences: "", currently_listening: "", aesthetic_notes: "" };
+
 export function createProject(data: Pick<Project, "title" | "type" | "description">): Project {
   const project: Project = {
     id: crypto.randomUUID(),
     ...data,
     tracks: [],
+    profile: DEFAULT_PROFILE,
     created_at: new Date().toISOString(),
   };
   const projects = getProjects();
@@ -30,6 +33,17 @@ export function createProject(data: Pick<Project, "title" | "type" | "descriptio
 
 export function updateProject(id: string, updates: Partial<Project>): void {
   const projects = getProjects().map((p) => (p.id === id ? { ...p, ...updates } : p));
+  saveProjects(projects);
+}
+
+export function getProfile(projectId: string) {
+  return getProject(projectId)?.profile ?? DEFAULT_PROFILE;
+}
+
+export function updateProfile(projectId: string, updates: Partial<Project["profile"]>): void {
+  const projects = getProjects().map((p) =>
+    p.id === projectId ? { ...p, profile: { ...(p.profile ?? DEFAULT_PROFILE), ...updates } } : p
+  );
   saveProjects(projects);
 }
 
