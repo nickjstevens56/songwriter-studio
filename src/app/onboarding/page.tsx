@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ArrowLeft, Music, Sparkles, Users, Headphones, Link2, Plus, Trash2, Loader2, CheckCircle2 } from "lucide-react";
