@@ -66,7 +66,7 @@ Be specific and actionable. Explain the "why" behind your recommendations.`;
     { role: "user" as const, content: userMessage },
   ];
 
-  const maxTokens = action === "analyze_influence" ? 2048 : 1024;
+  const maxTokens = action === "analyze_influence" ? 4096 : 1024;
 
   const response = await client.messages.create({
     model: "claude-sonnet-4-6",
