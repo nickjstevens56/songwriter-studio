@@ -6,17 +6,34 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 export async function POST(req: NextRequest) {
   const { action, track, profile, message, history } = await req.json();
 
+  // Build Spotify listening context if available
+  const snapshot = profile?.spotify_snapshot;
+  let spotifyContext = "";
+  if (snapshot) {
+    const topArtistNames = snapshot.top_artists?.map((a: { name: string }) => a.name).join(", ");
+    const topTrackNames = snapshot.top_tracks?.slice(0, 8).map((t: { name: string; artists: string[] }) => `${t.name} by ${t.artists[0]}`).join(", ");
+    const genres = [...new Set(snapshot.top_artists?.flatMap((a: { genres: string[] }) => a.genres) ?? [])].slice(0, 8).join(", ");
+    spotifyContext = [
+      topArtistNames && `Spotify top artists (recent): ${topArtistNames}`,
+      topTrackNames && `Spotify top tracks (recent): ${topTrackNames}`,
+      genres && `Genres in rotation: ${genres}`,
+    ].filter(Boolean).join("\n");
+  }
+
   // Merge project-level and track-level influences into one list
   const allInfluences = [
     profile?.core_influences,
     profile?.currently_listening,
+    snapshot && snapshot.top_artists?.slice(0, 5).map((a: { name: string }) => a.name).join(", "),
     track?.influences,
   ].filter(Boolean).join("; ");
 
   const profileContext = [
     profile?.core_influences && `Core influences: ${profile.core_influences}`,
-    profile?.currently_listening && `Currently listening to: ${profile.currently_listening}`,
+    profile?.currently_listening && `Currently listening to (manual): ${profile.currently_listening}`,
+    spotifyContext,
     profile?.aesthetic_notes && `Aesthetic/vibe: ${profile.aesthetic_notes}`,
+    profile?.soundcloud_url && `SoundCloud profile: ${profile.soundcloud_url}`,
   ].filter(Boolean).join("\n");
 
   let systemPrompt = "";

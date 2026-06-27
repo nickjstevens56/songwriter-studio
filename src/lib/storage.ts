@@ -16,7 +16,14 @@ export function getProject(id: string): Project | null {
   return getProjects().find((p) => p.id === id) ?? null;
 }
 
-const DEFAULT_PROFILE = { core_influences: "", currently_listening: "", aesthetic_notes: "" };
+const DEFAULT_PROFILE = {
+  core_influences: "",
+  currently_listening: "",
+  aesthetic_notes: "",
+  soundcloud_url: "",
+  spotify_connected: false,
+  spotify_snapshot: null,
+};
 
 export function createProject(data: Pick<Project, "title" | "type" | "description">): Project {
   const project: Project = {

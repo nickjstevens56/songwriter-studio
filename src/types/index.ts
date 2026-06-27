@@ -1,7 +1,27 @@
+export type SpotifyTrack = {
+  name: string;
+  artists: string[];
+};
+
+export type SpotifyArtist = {
+  name: string;
+  genres: string[];
+};
+
+export type SpotifySnapshot = {
+  top_tracks: SpotifyTrack[];
+  top_artists: SpotifyArtist[];
+  recently_played: SpotifyTrack[];
+  synced_at: string;
+};
+
 export type ProjectProfile = {
   core_influences: string;
   currently_listening: string;
   aesthetic_notes: string;
+  soundcloud_url: string;
+  spotify_connected: boolean;
+  spotify_snapshot: SpotifySnapshot | null;
 };
 
 export type Project = {
